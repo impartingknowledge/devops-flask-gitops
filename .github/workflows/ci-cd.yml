@@ -46,3 +46,19 @@ jobs:
           format: table
           exit-code: 1
           ignore-unfixed: true
+
+      
+      - name: Build Docker Image
+        run: |
+          docker build -t flask-devops-app:${{ github.sha }} .
+
+      - name: Trivy Docker Image Security Scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: flask-devops-app:${{ github.sha }}
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          format: table
+          exit-code: 1
+          ignore-unfixed: true
+
