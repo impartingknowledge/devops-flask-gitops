@@ -1,17 +1,14 @@
 
 apiVersion: apps/v1
 kind: Deployment
-
 metadata:
   name: flask-devops-app
   namespace: demo
-
   labels:
     app: flask-devops-app
 
 spec:
   replicas: 2
-
   selector:
     matchLabels:
       app: flask-devops-app
@@ -22,6 +19,9 @@ spec:
         app: flask-devops-app
 
     spec:
+      imagePullSecrets:
+        - name: ecr-secret
+
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
@@ -31,7 +31,6 @@ spec:
 
       containers:
         - name: flask-devops-app
-
           image: 024171229842.dkr.ecr.ap-south-1.amazonaws.com/flask-devops-app:a4eb89289862fa9a7a17b219e3185fbc68a57e81
 
           ports:
@@ -50,7 +49,6 @@ spec:
             requests:
               cpu: "100m"
               memory: "128Mi"
-
             limits:
               cpu: "500m"
               memory: "512Mi"
