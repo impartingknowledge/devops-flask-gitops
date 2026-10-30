@@ -1,6 +1,7 @@
 
 name: Flask DevOps CI/CD Pipeline
 
+# Trigger the pipeline on pushes and pull requests to main
 on:
   push:
     branches:
@@ -9,7 +10,8 @@ on:
   pull_request:
     branches:
       - main
-      
+
+# Permissions required by GitHub Actions and AWS OIDC
 permissions:
   contents: read
   id-token: write
@@ -20,26 +22,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Download source code from GitHub
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # Step 2: Set up Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
+      # Step 3: Install application dependencies
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      # Step 4: Analyze code quality using SonarQube Cloud
       - name: SonarQube Cloud Scan
         uses: SonarSource/sonarqube-scan-action@v8.3.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
+      # Step 5: Scan source code and configuration files using Trivy
       - name: Trivy Filesystem Security Scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -51,11 +58,12 @@ jobs:
           exit-code: 1
           ignore-unfixed: true
 
-      
+      # Step 6: Build Docker image on the GitHub Actions runner
       - name: Build Docker Image
         run: |
           docker build -t flask-devops-app:${{ github.sha }} .
 
+      # Step 7: Scan the Docker image for vulnerabilities
       - name: Trivy Docker Image Security Scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -66,30 +74,41 @@ jobs:
           exit-code: 1
           ignore-unfixed: true
 
+      # Step 8: Debug GitHub OIDC claims
+      # This helps verify the subject and audience sent to AWS
       - name: Debug GitHub OIDC claims
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/github-script@v7
         with:
           script: |
             const token = await core.getIDToken('sts.amazonaws.com');
+
+            const payload = token.split('.')[1];
+
             const claims = JSON.parse(
-              Buffer.from(token.split('.')[1], 'base64url').toString()
+              Buffer.from(payload, 'base64url').toString('utf8')
             );
-            core.info(`OIDC subject: ${claims.sub}`);
-            core.info(`OIDC audience: ${claims.aud}`);
 
-            # put in the actual git > actions > oidc > subject into the aws iam > trusted entity > trust relation ship policy
+            core.info('OIDC subject: ' + claims.sub);
+            core.info('OIDC audience: ' + claims.aud);
 
+      # Step 9: Authenticate GitHub Actions with AWS using OIDC
       - name: Configure AWS credentials
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ap-south-1
 
+      # Step 10: Login Docker to Amazon ECR
       - name: Login to Amazon ECR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      # Step 11: Push Docker image to Amazon ECR
       - name: Push Docker Image to Amazon ECR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: flask-devops-app
@@ -100,4 +119,3 @@ jobs:
 
           docker push \
             ${REGISTRY}/${REPOSITORY}:${IMAGE_TAG}
-
