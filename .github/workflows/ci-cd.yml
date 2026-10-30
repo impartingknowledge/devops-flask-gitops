@@ -77,6 +77,8 @@ jobs:
             core.info(`OIDC subject: ${claims.sub}`);
             core.info(`OIDC audience: ${claims.aud}`);
 
+            #i put in the actual git > actions > oidc > subject into the aws iam > trusted entity > trust relation ship policy
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
