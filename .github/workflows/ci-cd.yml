@@ -1,3 +1,4 @@
+
 name: Flask DevOps CI/CD Pipeline
 
 on:
@@ -10,8 +11,8 @@ on:
       - main
 
 jobs:
-  sonar-analysis:
-    name: SonarQube Cloud Analysis
+  security-analysis:
+    name: Code Quality and Security Scan
     runs-on: ubuntu-latest
 
     steps:
@@ -34,3 +35,14 @@ jobs:
         uses: SonarSource/sonarqube-scan-action@v8.3.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Trivy Filesystem Security Scan
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          format: table
+          exit-code: 1
+          ignore-unfixed: true
