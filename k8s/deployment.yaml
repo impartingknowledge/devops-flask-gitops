@@ -32,7 +32,7 @@ spec:
       containers:
         - name: flask-devops-app
 
-          image: 024171229842.dkr.ecr.ap-south-1.amazonaws.com/flask-devops-app:PLACEHOLDER
+          image: 024171229842.dkr.ecr.ap-south-1.amazonaws.com/flask-devops-app:a4eb89289862fa9a7a17b219e3185fbc68a57e81
 
           ports:
             - containerPort: 5000
